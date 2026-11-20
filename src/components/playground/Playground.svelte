@@ -6,37 +6,63 @@
 	import StepControls from "$components/ui/StepControls.svelte";
 	import { OPTIMIZERS, stretched, runAll, loss, fmt } from "$utils/optim.js";
 	import { valleyView } from "$components/slides/q2.js";
+	import { GALLERY } from "$utils/landscapes.js";
 
 	/** False while the Learn tab is showing (pauses playback). */
 	export let visible = false;
 
 	const KEYS = ["gd", "momentum", "adam"];
 	// Learning-rate slider ranges (log scale), per optimizer.
-	const LR_RANGE = { gd: [1e-3, 1], momentum: [1e-4, 0.1], adam: [1e-3, 2] };
+	const LR_RANGE = { gd: [1e-3, 3], momentum: [1e-4, 1], adam: [1e-3, 2] };
+	const REG_STEPS = 40;
 
 	// --- State ------------------------------------------------------------
-	let t = 1; // 0 = round bowl, 1 = narrow valley
-	let steps = 40;
+	let kind = "regression"; // "regression" or a GALLERY key
+	let t = 1; // regression only: 0 = round bowl, 1 = narrow valley
+	let steps = REG_STEPS;
 	let step = steps;
 	let autoLR = true;
 	let show = { gd: true, momentum: true, adam: true };
 	let hp = structuredClone(stretched(t).hp);
 	let start = stretched(t).start;
-	let lastT = t;
+	let lastKey = `${kind}:${t}`;
 
-	$: L = stretched(t);
-	$: view = valleyView(L, t);
-
-	// New landscape → new default start (the old one may be off-screen),
-	// and tuned learning rates unless the viewer has taken over.
-	$: if (t !== lastT) {
-		lastT = t;
-		start = L.start;
-		if (autoLR) for (const k of KEYS) hp[k].lr = L.hp[k].lr;
-		step = steps;
+	// Everything the plots need for the selected landscape.
+	$: scene = sceneFor(kind, t);
+	function sceneFor(kind, t) {
+		if (kind === "regression") {
+			const L = stretched(t);
+			return { data: L.data, view: valleyView(L, t), start: L.start, hp: L.hp, levels: "geometric", steps: REG_STEPS };
+		}
+		const G = GALLERY[kind];
+		return {
+			data: G.problem,
+			view: { xDomain: G.xDomain, yDomain: G.yDomain },
+			start: G.start,
+			hp: G.hp,
+			levels: G.levels ?? "quantile",
+			steps: G.steps,
+			axisLabels: { xLabel: "θ₀", yLabel: "θ₁" },
+			caption: G.caption
+		};
 	}
 
-	$: runs = runAll(start, L.data, steps, hp);
+	// New landscape → new default start (the old one may be off-screen), tuned
+	// learning rates unless the viewer has taken over, and (when switching
+	// landscape type) that landscape's default number of steps.
+	$: {
+		const key = `${kind}:${t}`;
+		if (key !== lastKey) {
+			const kindChanged = !lastKey.startsWith(`${kind}:`);
+			lastKey = key;
+			start = scene.start;
+			if (autoLR) for (const k of KEYS) hp[k].lr = scene.hp[k].lr;
+			if (kindChanged) steps = scene.steps;
+			step = steps;
+		}
+	}
+
+	$: runs = runAll(start, scene.data, steps, hp);
 	$: paths = KEYS.filter((k) => show[k]).map((k) => ({
 		points: runs[k].map((s) => s.theta),
 		color: OPTIMIZERS[k].color,
@@ -45,7 +71,7 @@
 		dots: false,
 		upTo: step
 	}));
-	$: startLoss = loss(start, L.data);
+	$: startLoss = loss(start, scene.data);
 	$: series = KEYS.filter((k) => show[k]).map((k) => ({
 		values: runs[k].map((s) => s.loss),
 		color: OPTIMIZERS[k].color,
@@ -56,7 +82,7 @@
 	$: results = Object.fromEntries(
 		KEYS.map((k) => {
 			const v = runs[k][Math.min(step, steps)].loss;
-			return [k, !Number.isFinite(v) || v > startLoss * 50 ? "diverged" : fmt(v, 3)];
+			return [k, !Number.isFinite(v) || v > Math.max(startLoss, 1) * 50 ? "diverged" : fmt(v, 3)];
 		})
 	);
 	const fmtLR = (v) => +v.toPrecision(2);
@@ -76,12 +102,14 @@
 	}
 	function useTuned() {
 		autoLR = true;
-		hp = structuredClone(L.hp);
+		hp = structuredClone(scene.hp);
 		step = steps;
 	}
 	function resetAll() {
+		kind = "regression";
 		t = 1;
-		steps = 40;
+		lastKey = "regression:1";
+		steps = REG_STEPS;
 		show = { gd: true, momentum: true, adam: true };
 		hp = structuredClone(stretched(1).hp);
 		autoLR = true;
@@ -105,11 +133,21 @@
 					<p class="muted">Click the plot to set a start point, then use the controls to change the landscape and each optimizer’s settings.</p>
 				</div>
 				<div class="aspect-[640/440] w-full">
-					<Contour data={L.data} {...view} levelAnchor={L.start} nLevels={6} {paths} interactive on:pick={pick} />
+					<Contour
+						data={scene.data}
+						{...scene.view}
+						{...scene.axisLabels ?? {}}
+						levels={scene.levels}
+						levelAnchor={scene.start}
+						nLevels={scene.levels === "geometric" ? 6 : 9}
+						{paths}
+						interactive
+						on:pick={pick}
+					/>
 				</div>
 				<StepControls bind:step max={steps} active={visible} interval={Math.max(40, 3000 / steps)} />
 				<div class="grid grid-cols-1 items-center gap-[1em] sm:grid-cols-[1.4fr_1fr]">
-					<div class="aspect-[420/300] w-full"><LossChart {series} upTo={step} yMaxFixed={startLoss * 1.3} /></div>
+					<div class="aspect-[420/300] w-full"><LossChart {series} upTo={step} yMaxFixed={Math.max(startLoss * 1.3, 1e-3)} /></div>
 					<table class="w-full text-left">
 						<thead class="muted text-[0.85em]"><tr><th class="pb-[0.3em] font-normal">Loss at step {step}</th><th /></tr></thead>
 						<tbody>
@@ -127,12 +165,26 @@
 			<!-- Controls -->
 			<div class="flex flex-col gap-[1.2em]">
 				<section class="panel">
-					<h3 class="font-semibold">Landscape</h3>
-					<input type="range" min="0" max="1" step="0.02" bind:value={t} aria-label="Landscape stretch" />
-					<div class="muted flex justify-between text-[0.85em]">
-						<button class="hover:underline" on:click={() => (t = 0)}>Round bowl</button>
-						<button class="hover:underline" on:click={() => (t = 1)}>Narrow valley</button>
-					</div>
+					<label class="flex items-center justify-between gap-[0.6em]">
+						<h3 class="font-semibold">Landscape</h3>
+						<select bind:value={kind} class="rounded-md border border-neutral-300 bg-white px-[0.5em] py-[0.2em]">
+							<option value="regression">Linear regression</option>
+							<optgroup label="Gallery">
+								{#each Object.entries(GALLERY) as [key, g]}
+									<option value={key}>{g.name}</option>
+								{/each}
+							</optgroup>
+						</select>
+					</label>
+					{#if kind === "regression"}
+						<input type="range" min="0" max="1" step="0.02" bind:value={t} aria-label="Landscape stretch" />
+						<div class="muted flex justify-between text-[0.85em]">
+							<button class="hover:underline" on:click={() => (t = 0)}>Round bowl</button>
+							<button class="hover:underline" on:click={() => (t = 1)}>Narrow valley</button>
+						</div>
+					{:else}
+						<p class="text-[0.9em] leading-snug">{scene.caption}</p>
+					{/if}
 				</section>
 
 				<section class="panel">
@@ -199,7 +251,7 @@
 				</section>
 
 				<div class="flex flex-wrap gap-[0.6em]">
-					<button class="btn" on:click={() => ((start = L.start), (step = steps))}>Reset start point</button>
+					<button class="btn" on:click={() => ((start = scene.start), (step = steps))}>Reset start point</button>
 					<button class="btn" on:click={resetAll}>Reset everything</button>
 				</div>
 			</div>
