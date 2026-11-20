@@ -60,6 +60,11 @@
 		})
 	);
 	const fmtLR = (v) => +v.toPrecision(2);
+	const fmtBeta2 = (v) => +v.toFixed(4);
+	function setBeta2(logOneMinus) {
+		hp.adam.beta2 = +(1 - 10 ** logOneMinus).toFixed(4);
+		step = steps;
+	}
 
 	// --- Handlers -----------------------------------------------------------
 	const toLog = (v) => Math.log10(v);
@@ -159,8 +164,22 @@
 								</label>
 							{:else if k === "adam"}
 								<label class="flex flex-col">
-									<span class="text-[0.9em]">β₁ = <b class="tabular-nums">{hp.adam.beta1}</b> <span class="muted">(β₂ = 0.999)</span></span>
+									<span class="text-[0.9em]">β₁ = <b class="tabular-nums">{hp.adam.beta1}</b> <span class="muted">(first moment)</span></span>
 									<input type="range" min="0" max="0.99" step="0.01" bind:value={hp.adam.beta1} on:input={() => (step = steps)} />
+								</label>
+								<!-- β₂ sits in 0.9–0.9999, so the slider works on −log10(1 − β₂) (1 → 0.9, 4 → 0.9999) -->
+								<label class="flex flex-col">
+									<span class="text-[0.9em]">β₂ = <b class="tabular-nums">{fmtBeta2(hp.adam.beta2)}</b> <span class="muted">(second moment)</span></span>
+									<input
+										type="range"
+										min="1"
+										max="4"
+										step="0.05"
+										value={-Math.log10(1 - hp.adam.beta2)}
+										on:input={(e) => setBeta2(-e.currentTarget.value)}
+										aria-label="Adam beta 2"
+									/>
+									<span class="muted text-[0.8em]">Lower β₂ adapts faster to recent gradient sizes.</span>
 								</label>
 							{/if}
 						</div>
