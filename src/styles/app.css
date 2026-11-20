@@ -1,33 +1,14 @@
 /* Fonts */
-@import "@fontsource/old-standard-tt/400.css";
-@import "@fontsource/old-standard-tt/700.css";
 @import "@fontsource-variable/chivo";
-@import "@fontsource/bungee-outline";
-@import "@fontsource/bungee-hairline";
+@import "katex/dist/katex.min.css";
 
 /* Tailwind */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-::selection {
-	color: hsl(191, 20%, 16%);
-	background-color: hsla(191, 97%, 77%, 0.9);
-}
-
 body {
-  /* overflow: hidden; */
-
-  @apply overflow-auto lg:overflow-hidden;
-}
-
-ul {
-	/* @apply list-inside; */
-}
-
-li:not(:last-child) {
-	/* margin-bottom: 5px; */
-	@apply mb-5;
+	@apply bg-[#cfe0e3] text-neutral-800;
 }
 
 .skip-to-main {
@@ -39,10 +20,10 @@ li:not(:last-child) {
 }
 
 .skip-to-main:focus {
-	background-color: var(--color-gray-900, black);
-	color: var(--color-white, white);
+	background-color: black;
+	color: white;
 	width: auto;
 	height: auto;
 	padding: 8px;
-	z-index: var(--z-overlay, 1000);
+	z-index: 1000;
 }

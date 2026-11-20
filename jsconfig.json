@@ -8,9 +8,6 @@
 			"$lib/*": [
 				"src/*"
 			],
-			"$actions/*": [
-				"src/actions/*"
-			],
 			"$components/*": [
 				"src/components/*"
 			],
@@ -26,15 +23,9 @@
 			"$styles/*": [
 				"src/styles/*"
 			],
-			"$svg/*": [
-				"src/svg/*"
-			],
 			"$utils/*": [
 				"src/utils/*"
-			],
-			"$shaders/*": [
-				"src/shaders/*"
-			],
+			]
 		}
 	},
 	"include": [
