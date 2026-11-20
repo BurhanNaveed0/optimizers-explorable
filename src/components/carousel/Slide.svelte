@@ -1,5 +1,5 @@
 <script>
-	export let number;
+	export let number = undefined; // kept so callers needn't change
 	export let active = false;
 </script>
 
@@ -9,7 +9,4 @@
 	inert={!active ? true : undefined}
 >
 	<slot />
-	<span class="pointer-events-none absolute bottom-[0.6em] right-[1em] text-[0.85em] text-neutral-400">
-		Slide {number}
-	</span>
 </section>

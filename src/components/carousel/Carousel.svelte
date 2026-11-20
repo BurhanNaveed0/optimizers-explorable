@@ -37,7 +37,7 @@
 		style="max-width: min(72rem, calc((100vh - 18rem) * 16 / 9 + 5rem))"
 	>
 		<!-- Viewport: all slides stay mounted so interactive state survives navigation -->
-		<div class="slide-viewport relative h-[80vh] w-full overflow-hidden border md:h-auto md:aspect-[16/9] border-neutral-500 bg-white">
+		<div class="slide-viewport relative h-[80vh] w-full overflow-hidden rounded-[1.75rem] border border-neutral-400 bg-white shadow-inner md:aspect-[16/9] md:h-auto">
 			<div
 				class="flex h-full transition-transform duration-500 ease-in-out motion-reduce:transition-none"
 				style="transform: translateX(-{index * 100}%)"

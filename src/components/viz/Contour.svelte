@@ -115,10 +115,10 @@
 	on:pointercancel={up}
 >
 	<defs>
-		<clipPath id="clip-{uid}"><rect x={m.l} y={m.t} width={width - m.l - m.r} height={height - m.t - m.b} /></clipPath>
+		<clipPath id="clip-{uid}"><rect rx="14" x={m.l} y={m.t} width={width - m.l - m.r} height={height - m.t - m.b} /></clipPath>
 	</defs>
 
-	<rect x={m.l} y={m.t} width={width - m.l - m.r} height={height - m.t - m.b} fill="white" stroke="#d4d4d4" stroke-width="2" />
+	<rect rx="14" x={m.l} y={m.t} width={width - m.l - m.r} height={height - m.t - m.b} fill="white" stroke="#d4d4d4" stroke-width="2" />
 
 	<g clip-path="url(#clip-{uid})">
 		{#each contourPaths as d}
