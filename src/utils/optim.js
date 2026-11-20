@@ -67,6 +67,12 @@ export const VALLEY_DATA = dataset(LANDSCAPES.valley);
 // ---------------------------------------------------------------------------
 // Loss and gradient
 // ---------------------------------------------------------------------------
+// `data` is usually a regression dataset ([[x, y], ...]). It can also be a
+// "problem" object { loss(θ), grad(θ), minima: [θ, ...] } for the landscape
+// gallery (see landscapes.js). loss/grad/minimum accept either, so the
+// optimizers and plots work on any 2-parameter loss.
+const isProblem = (d) => d != null && !Array.isArray(d);
+
 export const predict = ([t0, t1], x) => t0 + t1 * x;
 
 export function residuals(theta, data) {
@@ -75,12 +81,14 @@ export function residuals(theta, data) {
 
 /** Mean squared error L(θ₀, θ₁) = (1/n) Σ (yᵢ − ŷᵢ)². */
 export function loss(theta, data) {
+	if (isProblem(data)) return data.loss(theta);
 	const r = residuals(theta, data);
 	return r.reduce((s, v) => s + v * v, 0) / r.length;
 }
 
 /** ∇L = [−(2/n) Σ rᵢ, −(2/n) Σ rᵢxᵢ]. */
 export function grad(theta, data) {
+	if (isProblem(data)) return data.grad(theta);
 	const n = data.length;
 	let g0 = 0,
 		g1 = 0;
@@ -92,8 +100,14 @@ export function grad(theta, data) {
 	return [(-2 / n) * g0, (-2 / n) * g1];
 }
 
-/** Closed-form least-squares minimum. */
+/** All minima to mark on a plot (regression has exactly one). */
+export function minima(data) {
+	return isProblem(data) ? data.minima : [minimum(data)];
+}
+
+/** Closed-form least-squares minimum (or a problem's global minimum). */
 export function minimum(data) {
+	if (isProblem(data)) return data.minima[0];
 	const n = data.length;
 	const mx = data.reduce((s, d) => s + d[0], 0) / n;
 	const my = data.reduce((s, d) => s + d[1], 0) / n;
