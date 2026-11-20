@@ -4,6 +4,8 @@
 
 	/** Array of Svelte components, one per slide. */
 	export let slides = [];
+	/** False while another tab is showing: pauses slides and ignores arrow keys. */
+	export let visible = true;
 
 	$: total = slides.length;
 	$: index = Math.min(Math.max($currentSlide, 0), Math.max(total - 1, 0));
@@ -16,7 +18,9 @@
 
 	function onKeydown(e) {
 		// Don't hijack arrow keys while the user is dragging a slider or typing.
+		if (!visible) return;
 		const tag = e.target?.tagName;
+		if (e.target?.getAttribute?.("role") === "tab") return;
 		if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 		if (e.key === "ArrowLeft") prev();
 		else if (e.key === "ArrowRight") next();
@@ -25,9 +29,13 @@
 
 <svelte:window on:keydown={onKeydown} />
 
-<div class="flex min-h-screen flex-col items-center justify-center gap-6 bg-[#cfe0e3] px-4 py-6">
+<div class="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-6">
 	<!-- Device frame -->
-	<div class="w-full max-w-6xl rounded-[2.5rem] border-2 border-neutral-500 bg-neutral-300 p-4 sm:p-10">
+	<!-- Width is capped by the window height too, so the whole slide fits on screen -->
+	<div
+		class="w-full rounded-[2.5rem] border-2 border-neutral-500 bg-neutral-300 p-4 sm:p-10"
+		style="max-width: min(72rem, calc((100vh - 18rem) * 16 / 9 + 5rem))"
+	>
 		<!-- Viewport: all slides stay mounted so interactive state survives navigation -->
 		<div class="slide-viewport relative h-[80vh] w-full overflow-hidden border md:h-auto md:aspect-[16/9] border-neutral-500 bg-white">
 			<div
@@ -35,8 +43,8 @@
 				style="transform: translateX(-{index * 100}%)"
 			>
 				{#each slides as component, i}
-					<Slide number={i + 1} active={i === index}>
-						<svelte:component this={component} active={i === index} />
+					<Slide number={i + 1} active={visible && i === index}>
+						<svelte:component this={component} active={visible && i === index} />
 					</Slide>
 				{/each}
 			</div>

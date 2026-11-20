@@ -1,5 +1,5 @@
 <script>
-	export let title = "Optimizers Explorable";
+	export let title = "Optimizers Exploration Tool";
 	export let description = "An interactive explorable of optimization algorithms";
 </script>
 

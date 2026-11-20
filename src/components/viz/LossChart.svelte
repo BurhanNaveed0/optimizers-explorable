@@ -11,13 +11,16 @@
 
 	const m = { t: 30, r: 16, b: 34, l: 50 };
 	$: n = Math.max(...series.map((s) => s.values.length)) - 1;
-	$: yMax = Math.max(...series.map((s) => s.values[0])) * 1.05;
+	/** Optional fixed top of the y-axis (otherwise: the largest starting loss). */
+	export let yMaxFixed = null;
+	$: yMax = yMaxFixed ?? Math.max(...series.map((s) => s.values[0])) * 1.05;
 	$: x = scaleLinear().domain([0, n]).range([m.l, width - m.r]);
 	$: y = scaleLinear().domain([0, yMax]).range([height - m.b, m.t]).clamp(true);
 	$: path = (vals) =>
 		vals
 			.slice(0, upTo == null ? undefined : upTo + 1)
-			.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`)
+			.map((v) => (Number.isFinite(v) ? v : Infinity))
+			.map((v, i) => `${i ? "L" : "M"}${x(i)},${Number.isFinite(v) ? y(v) : y.range()[1]}`)
 			.join("");
 </script>
 

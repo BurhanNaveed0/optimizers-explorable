@@ -69,7 +69,15 @@
 
 	// --- Helpers ----------------------------------------------------------
 	const P = (t) => [x(t[0]), y(t[1])];
-	const line = (pts) => pts.map((t, i) => `${i ? "L" : "M"}${x(t[0])},${y(t[1])}`).join("");
+	// Stop drawing at the first non-finite point (a diverged optimizer), and
+	// clamp far-away points so the SVG path stays valid.
+	const finite = (pts) => {
+		const i = pts.findIndex((t) => !Number.isFinite(t[0]) || !Number.isFinite(t[1]));
+		return i === -1 ? pts : pts.slice(0, i);
+	};
+	const BIG = 1e5;
+	const cl = (v) => Math.max(-BIG, Math.min(BIG, v));
+	const line = (pts) => finite(pts).map((t, i) => `${i ? "L" : "M"}${cl(x(t[0]))},${cl(y(t[1]))}`).join("");
 
 	// --- Interaction ------------------------------------------------------
 	let svgEl;
@@ -118,7 +126,7 @@
 		{/each}
 
 		{#each paths as p}
-			{@const pts = p.upTo == null ? p.points : p.points.slice(0, p.upTo + 1)}
+			{@const pts = finite(p.upTo == null ? p.points : p.points.slice(0, p.upTo + 1))}
 			<path
 				d={line(pts)}
 				fill="none"
