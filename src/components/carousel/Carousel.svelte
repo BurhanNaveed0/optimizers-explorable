@@ -29,7 +29,7 @@
 	<!-- Device frame -->
 	<div class="w-full max-w-6xl rounded-[2.5rem] border-2 border-neutral-500 bg-neutral-300 p-4 sm:p-10">
 		<!-- Viewport: all slides stay mounted so interactive state survives navigation -->
-		<div class="relative h-[75vh] w-full overflow-hidden border md:h-auto md:aspect-[16/9] border-neutral-500 bg-white">
+		<div class="slide-viewport relative h-[80vh] w-full overflow-hidden border md:h-auto md:aspect-[16/9] border-neutral-500 bg-white">
 			<div
 				class="flex h-full transition-transform duration-500 ease-in-out motion-reduce:transition-none"
 				style="transform: translateX(-{index * 100}%)"
