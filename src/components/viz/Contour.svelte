@@ -1,7 +1,7 @@
 <script>
 	import { contours, geoPath, geoTransform, scaleLinear } from "d3";
 	import { createEventDispatcher } from "svelte";
-	import { loss, minimum } from "$utils/optim.js";
+	import { loss, minimum, minima } from "$utils/optim.js";
 	import { arrowHead, starPoints } from "./arrow.js";
 
 	/** Dataset defining the loss landscape. */
@@ -12,6 +12,8 @@
 	/** Contour levels are spaced geometrically from the minimum up to the loss at `levelAnchor`. */
 	export let levelAnchor = null;
 	export let nLevels = 5;
+	/** "geometric" (default, for bowls), "quantile" (any shape) or "linear" (even loss steps). */
+	export let levels = "geometric";
 	/**
 	 * Paths: [{ points: [[θ₀, θ₁], ...], color, dash?, width?, opacity?, dots?, labels?, upTo? }]
 	 * `upTo` draws only the first upTo+1 points (for step-by-step animation).
@@ -37,6 +39,7 @@
 	$: x = scaleLinear().domain(xDomain).range([m.l, width - m.r]);
 	$: y = scaleLinear().domain(yDomain).range([height - m.b, m.t]);
 	$: min = minimum(data);
+	$: allMinima = minima(data);
 
 	// --- Contours ---------------------------------------------------------
 	const NX = 140,
@@ -54,7 +57,26 @@
 	})();
 	$: lMin = loss(min, data);
 	$: lAnchor = levelAnchor ? loss(levelAnchor, data) : lMin + 10;
-	$: thresholds = Array.from({ length: nLevels }, (_, k) => lMin + (lAnchor - lMin) * 1.6 * 0.42 ** k);
+	// "geometric" suits a bowl (rings tighten toward the minimum). "quantile"
+	// spreads levels by how much of the view sits below each loss value, which
+	// works for any shape (plateaus, saddles, several minima).
+	// "linear" spaces levels evenly in loss value, so flat regions stay empty.
+	$: thresholds =
+		levels === "quantile"
+			? quantileThresholds(grid, nLevels)
+			: levels === "linear"
+			? linearThresholds(grid, nLevels)
+			: Array.from({ length: nLevels }, (_, k) => lMin + (lAnchor - lMin) * 1.6 * 0.42 ** k);
+	function linearThresholds(vals, n) {
+		let lo = Infinity, hi = -Infinity;
+		for (const v of vals) (lo = Math.min(lo, v)), (hi = Math.max(hi, v));
+		return Array.from({ length: n }, (_, k) => lo + ((k + 1) / (n + 1)) * (hi - lo));
+	}
+	function quantileThresholds(vals, n) {
+		const sorted = Float64Array.from(vals).sort();
+		// Denser near the bottom, where the interesting structure is.
+		return Array.from({ length: n }, (_, k) => sorted[Math.floor(((k + 1) / (n + 1)) ** 1.6 * (sorted.length - 1))]);
+	}
 	$: contourPaths = (() => {
 		const sx = (width - m.l - m.r) / NX;
 		const sy = (height - m.t - m.b) / NY;
@@ -163,11 +185,15 @@
 		{/each}
 
 		{#if showMin}
-			{@const pm = P(min)}
-			<polygon points={starPoints(pm[0], pm[1], 15)} fill="#fbbf24" stroke="#222" stroke-width="1.5" />
-			{#if minLabel}
-				<text x={pm[0] + 14} y={pm[1] + 30} font-size="17" class="fill-neutral-700">{minLabel}</text>
-			{/if}
+			<!-- One star per minimum; a problem can name them via `minimaLabels`. -->
+			{#each allMinima as mn, i}
+				{@const pm = P(mn)}
+				{@const label = data?.minimaLabels?.[i] ?? (i === 0 ? minLabel : "")}
+				<polygon points={starPoints(pm[0], pm[1], 15)} fill="#fbbf24" stroke="#222" stroke-width="1.5" />
+				{#if label}
+					<text x={pm[0] + 14} y={pm[1] + 30} font-size="17" class="fill-neutral-700">{label}</text>
+				{/if}
+			{/each}
 		{/if}
 
 		{#each markers as mk}
